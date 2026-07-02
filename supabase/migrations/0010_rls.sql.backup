@@ -1,0 +1,362 @@
+-- =====================================================
+-- Asset Monitoring System
+-- Row Level Security (permission-based, final)
+-- =====================================================
+-- NOTE: The old draft had an early "authenticated can do
+-- everything" RLS pass that got fully dropped and replaced
+-- a few migrations later. Since nothing's deployed yet,
+-- this migration just enables RLS and creates the final
+-- permission-based policies directly — no create-then-drop.
+--
+-- FLAGGED (not fixed, needs your call):
+--   - system_settings has a SELECT policy only. No INSERT/
+--     UPDATE/DELETE policy exists for it at all, so only a
+--     service-role connection (which bypasses RLS) can
+--     write settings. Intentional, or does an admin UI need
+--     to write these as an authenticated user?
+--   - activity_logs has SELECT + INSERT only, no UPDATE/
+--     DELETE policy — logs are effectively immutable to
+--     authenticated users. Assumed intentional for an audit
+--     trail; flag if you actually need to prune/edit logs.
+-- =====================================================
+
+---------------------------------------------------------
+-- Enable RLS
+---------------------------------------------------------
+
+ALTER TABLE media ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE asset_statuses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asset_conditions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE maintenance_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE asset_transaction_types ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manufacturers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE models ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE asset_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE maintenance_logs ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+
+---------------------------------------------------------
+-- MEDIA
+---------------------------------------------------------
+
+CREATE POLICY media_select
+ON media
+FOR SELECT
+TO authenticated
+USING (has_permission('media.manage'));
+
+CREATE POLICY media_insert
+ON media
+FOR INSERT
+TO authenticated
+WITH CHECK (has_permission('media.manage'));
+
+CREATE POLICY media_update
+ON media
+FOR UPDATE
+TO authenticated
+USING (has_permission('media.manage'))
+WITH CHECK (has_permission('media.manage'));
+
+CREATE POLICY media_delete
+ON media
+FOR DELETE
+TO authenticated
+USING (has_permission('media.manage'));
+
+---------------------------------------------------------
+-- ASSETS
+---------------------------------------------------------
+
+CREATE POLICY assets_select
+ON assets
+FOR SELECT
+TO authenticated
+USING (has_permission('asset.view'));
+
+CREATE POLICY assets_insert
+ON assets
+FOR INSERT
+TO authenticated
+WITH CHECK (has_permission('asset.create'));
+
+CREATE POLICY assets_update
+ON assets
+FOR UPDATE
+TO authenticated
+USING (has_permission('asset.update'))
+WITH CHECK (has_permission('asset.update'));
+
+CREATE POLICY assets_delete
+ON assets
+FOR DELETE
+TO authenticated
+USING (has_permission('asset.delete'));
+
+---------------------------------------------------------
+-- MAINTENANCE
+---------------------------------------------------------
+
+CREATE POLICY maintenance_select
+ON maintenance_logs
+FOR SELECT
+TO authenticated
+USING (has_permission('maintenance.view'));
+
+CREATE POLICY maintenance_insert
+ON maintenance_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (has_permission('maintenance.create'));
+
+CREATE POLICY maintenance_update
+ON maintenance_logs
+FOR UPDATE
+TO authenticated
+USING (has_permission('maintenance.update'))
+WITH CHECK (has_permission('maintenance.update'));
+
+CREATE POLICY maintenance_delete
+ON maintenance_logs
+FOR DELETE
+TO authenticated
+USING (has_permission('maintenance.delete'));
+
+---------------------------------------------------------
+-- ASSET TRANSACTIONS
+---------------------------------------------------------
+
+CREATE POLICY transactions_select
+ON asset_transactions
+FOR SELECT
+TO authenticated
+USING (has_permission('asset.view'));
+
+CREATE POLICY transactions_insert
+ON asset_transactions
+FOR INSERT
+TO authenticated
+WITH CHECK (has_permission('asset.update'));
+
+CREATE POLICY transactions_update
+ON asset_transactions
+FOR UPDATE
+TO authenticated
+USING (has_permission('asset.update'))
+WITH CHECK (has_permission('asset.update'));
+
+CREATE POLICY transactions_delete
+ON asset_transactions
+FOR DELETE
+TO authenticated
+USING (has_permission('asset.delete'));
+
+---------------------------------------------------------
+-- CATEGORIES
+---------------------------------------------------------
+
+CREATE POLICY categories_select
+ON categories
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY categories_insert
+ON categories
+FOR INSERT
+TO authenticated
+WITH CHECK (has_permission('category.manage'));
+
+CREATE POLICY categories_update
+ON categories
+FOR UPDATE
+TO authenticated
+USING (has_permission('category.manage'))
+WITH CHECK (has_permission('category.manage'));
+
+CREATE POLICY categories_delete
+ON categories
+FOR DELETE
+TO authenticated
+USING (has_permission('category.manage'));
+
+---------------------------------------------------------
+-- MASTER TABLES (public-read lookups)
+---------------------------------------------------------
+
+CREATE POLICY asset_statuses_select
+ON asset_statuses
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY asset_conditions_select
+ON asset_conditions
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY maintenance_types_select
+ON maintenance_types
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY asset_transaction_types_select
+ON asset_transaction_types
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY manufacturers_select
+ON manufacturers
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY brands_select
+ON brands
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY models_select
+ON models
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY roles_select
+ON roles
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY departments_select
+ON departments
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY locations_select
+ON locations
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY suppliers_select
+ON suppliers
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY activity_types_select
+ON activity_types
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY system_settings_select
+ON system_settings
+FOR SELECT
+TO authenticated
+USING (true);
+
+---------------------------------------------------------
+-- PERMISSIONS / ROLE_PERMISSIONS (read-only reference)
+---------------------------------------------------------
+
+CREATE POLICY permissions_select
+ON permissions
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY role_permissions_select
+ON role_permissions
+FOR SELECT
+TO authenticated
+USING (true);
+
+---------------------------------------------------------
+-- PROFILES
+---------------------------------------------------------
+
+CREATE POLICY profiles_select
+ON profiles
+FOR SELECT
+TO authenticated
+USING (
+    auth.uid() = id
+    OR has_permission('user.view')
+);
+
+CREATE POLICY profiles_insert
+ON profiles
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    auth.uid() = id
+    OR has_permission('user.manage')
+);
+
+CREATE POLICY profiles_update
+ON profiles
+FOR UPDATE
+TO authenticated
+USING (
+    auth.uid() = id
+    OR has_permission('user.manage')
+)
+WITH CHECK (
+    auth.uid() = id
+    OR has_permission('user.manage')
+);
+
+CREATE POLICY profiles_delete
+ON profiles
+FOR DELETE
+TO authenticated
+USING (
+    has_permission('user.manage')
+);
+
+---------------------------------------------------------
+-- ACTIVITY LOGS
+---------------------------------------------------------
+
+CREATE POLICY activity_logs_select
+ON activity_logs
+FOR SELECT
+TO authenticated
+USING (has_permission('user.view'));
+
+CREATE POLICY activity_logs_insert
+ON activity_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+---------------------------------------------------------
+-- NO OTHER POLICIES
+---------------------------------------------------------
+-- PostgreSQL denies access by default for any operation
+-- without a matching policy.
