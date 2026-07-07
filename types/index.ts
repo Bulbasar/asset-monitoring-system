@@ -18,6 +18,21 @@ export interface Profile {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  roles?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  departments?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  locations?: {
+    id: string;
+    name: string;
+    code: string;
+  };
 }
 
 export interface Role {
@@ -26,6 +41,8 @@ export interface Role {
   name: string;
   description?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Permission {
@@ -34,6 +51,11 @@ export interface Permission {
   name: string;
   module: string;
   description?: string;
+  created_at: string;
+}
+
+export interface RoleWithPermissions extends Role {
+  permissions?: Permission[];
 }
 
 export interface Asset {
@@ -61,6 +83,10 @@ export interface Asset {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  categories?: { name: string };
+  locations?: { name: string };
+  asset_statuses?: { name: string };
+  asset_conditions?: { name: string };
 }
 
 export interface Category {
@@ -70,6 +96,8 @@ export interface Category {
   description?: string;
   image_file_id?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Brand {
@@ -80,6 +108,9 @@ export interface Brand {
   description?: string;
   image_file_id?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  manufacturers?: { name: string };
 }
 
 export interface Model {
@@ -91,6 +122,9 @@ export interface Model {
   description?: string;
   image_file_id?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  brands?: { name: string };
 }
 
 export interface Manufacturer {
@@ -102,6 +136,8 @@ export interface Manufacturer {
   country_of_origin?: string;
   image_file_id?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Supplier {
@@ -114,6 +150,8 @@ export interface Supplier {
   website_url?: string;
   address?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Location {
@@ -125,6 +163,8 @@ export interface Location {
   floor?: string;
   room?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Department {
@@ -133,6 +173,8 @@ export interface Department {
   name: string;
   description?: string;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MaintenanceLog {

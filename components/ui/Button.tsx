@@ -23,13 +23,17 @@ export function Button({
 }: ButtonProps) {
   const variants = {
     primary:
-      "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30 dark:shadow-blue-600/20",
-    secondary: "bg-slate-600 hover:bg-slate-700 text-white",
-    danger: "bg-red-600 hover:bg-red-700 text-white",
-    success: "bg-green-600 hover:bg-green-700 text-white",
-    warning: "bg-yellow-600 hover:bg-yellow-700 text-white",
+      "bg-primary hover:bg-primary/80 text-white dark:text-[#121212] border border-primary shadow-sm hover:shadow-md transition-all duration-300",
+    secondary:
+      "bg-secondary hover:bg-muted text-foreground border border-border hover:border-primary transition-all duration-300",
+    danger:
+      "bg-destructive hover:bg-destructive/80 text-white border border-destructive shadow-sm transition-all duration-300",
+    success:
+      "bg-success hover:bg-success/80 text-white border border-success shadow-sm transition-all duration-300",
+    warning:
+      "bg-warning hover:bg-warning/80 text-white border border-warning shadow-sm transition-all duration-300",
     ghost:
-      "bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300",
+      "bg-transparent hover:bg-secondary text-foreground border border-border hover:border-primary transition-all duration-300",
   };
 
   const sizes = {
@@ -41,7 +45,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]",
+        "rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]",
         variants[variant],
         sizes[size],
         className,

@@ -10,31 +10,30 @@ export function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 px-6 py-4 transition-colors duration-300">
-      <div className="flex items-center justify-between">
+    <header className="w-full bg-header border-b border-header px-6 py-4 transition-colors duration-300 flex-shrink-0">
+      <div className="flex items-center justify-between max-w-full">
         <div>
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+          <h2 className="text-xl font-semibold text-header">
             Welcome back,{" "}
             {profile?.display_name || user?.email?.split("@")[0] || "User"}
           </h2>
         </div>
         <div className="flex items-center gap-4">
-          {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg bg-secondary hover:bg-muted transition-colors duration-300 border border-border"
             aria-label="Toggle theme"
           >
             {theme === "light" ? (
-              <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <Moon className="w-5 h-5 text-foreground" />
             ) : (
-              <Sun className="w-5 h-5 text-yellow-400" />
+              <Sun className="w-5 h-5 text-foreground" />
             )}
           </button>
 
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <User className="w-4 h-4" />
-            <span>{profile?.role?.name || "Loading..."}</span>
+            <span>{profile?.display_name || "Loading..."}</span>
           </div>
           <Button variant="secondary" size="sm" onClick={signOut}>
             <LogOut className="w-4 h-4 mr-2" />

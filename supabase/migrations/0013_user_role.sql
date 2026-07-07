@@ -42,25 +42,68 @@ AS $$
 $$;
 
 ---------------------------------------------------------
--- FUNCTION: Check if user has permission
+-- FUNCTION: Check if user has permission (FIXED)
 ---------------------------------------------------------
 CREATE OR REPLACE FUNCTION has_permission(p_code TEXT)
 RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+    v_user_id UUID;
+    v_role_code TEXT;
+    v_has_perm BOOLEAN;
+BEGIN
+    -- Get the current user ID
+    v_user_id := auth.uid();
+    
+    -- If no user is logged in, return false
+    IF v_user_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Get the user's role
+    SELECT r.code INTO v_role_code
+    FROM profiles p
+    INNER JOIN roles r ON r.id = p.role_id
+    WHERE p.id = v_user_id
+      AND p.is_active = TRUE;
+    
+    -- If user has admin role, return true for any permission
+    IF v_role_code = 'admin' THEN
+        RETURN TRUE;
+    END IF;
+    
+    -- Check if the user has the specific permission
     SELECT EXISTS (
         SELECT 1
         FROM profiles p
-        JOIN role_permissions rp ON rp.role_id = p.role_id
-        JOIN permissions perm ON perm.id = rp.permission_id
-        WHERE auth.uid() IS NOT NULL
-          AND p.id = auth.uid()
+        INNER JOIN role_permissions rp ON rp.role_id = p.role_id
+        INNER JOIN permissions perm ON perm.id = rp.permission_id
+        WHERE p.id = v_user_id
+          AND p.is_active = TRUE
           AND perm.code = p_code
-    );
+    ) INTO v_has_perm;
+    
+    -- Return false if null, otherwise return the result
+    RETURN COALESCE(v_has_perm, FALSE);
+END;
 $$;
+
+-- Grant execute permission to all roles
+GRANT EXECUTE ON FUNCTION has_permission(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION has_permission(TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION has_permission(TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION has_permission(TEXT) TO postgres;
+
+-- Grant usage on schema
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO service_role;
+
+-- Make sure the function is accessible to the API
+ALTER FUNCTION has_permission(TEXT) OWNER TO postgres;
 
 ---------------------------------------------------------
 -- INDEXES (SAFETY / PERFORMANCE)

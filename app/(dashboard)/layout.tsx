@@ -22,8 +22,8 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-theme">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -33,11 +33,13 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="flex min-h-screen bg-theme transition-colors duration-300">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        <main className="flex-1 p-6 overflow-y-auto bg-theme transition-colors duration-300">
+          {children}
+        </main>
       </div>
     </div>
   );

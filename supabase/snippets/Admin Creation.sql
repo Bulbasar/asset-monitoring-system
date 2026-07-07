@@ -1,6 +1,6 @@
 DO $$
 DECLARE
-    v_admin_auth_id UUID := 'eb6ede25-009e-4a50-9d62-01ce2f2127ef'; -- Replace with your actual UUID
+    v_admin_auth_id UUID := 'cd3f2764-6ad5-4df2-b061-b2f9cbd78219'; -- Replace with your actual UUID
     v_admin_role_id UUID;
     v_dept_id UUID;
     v_loc_id UUID;

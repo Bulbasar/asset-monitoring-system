@@ -4,14 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageTitle } from "@/components/layout/PageTitle";
-import {
-  Package,
-  Wrench,
-  Users,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+import { Package, Wrench, Users, TrendingUp } from "lucide-react";
 
 interface DashboardStats {
   totalAssets: number;
@@ -79,38 +72,10 @@ export default function DashboardPage() {
   }, []);
 
   const statsCards = [
-    {
-      title: "Total Assets",
-      value: stats.totalAssets,
-      icon: Package,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      loading,
-    },
-    {
-      title: "Active Assets",
-      value: stats.activeAssets,
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      loading,
-    },
-    {
-      title: "Maintenance Due",
-      value: stats.maintenanceDue,
-      icon: Wrench,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      loading,
-    },
-    {
-      title: "Total Users",
-      value: stats.totalUsers,
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      loading,
-    },
+    { title: "Total Assets", value: stats.totalAssets, icon: Package },
+    { title: "Active Assets", value: stats.activeAssets, icon: TrendingUp },
+    { title: "Maintenance Due", value: stats.maintenanceDue, icon: Wrench },
+    { title: "Total Users", value: stats.totalUsers, icon: Users },
   ];
 
   return (
@@ -120,23 +85,27 @@ export default function DashboardPage() {
         subtitle="Overview of your asset monitoring system"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index}>
+            <Card key={index} className="shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">{stat.title}</p>
-                    {stat.loading ? (
-                      <div className="h-8 w-20 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <p className="text-sm text-muted-foreground transition-colors duration-300">
+                      {stat.title}
+                    </p>
+                    {loading ? (
+                      <div className="h-8 w-20 bg-muted animate-pulse rounded mt-1"></div>
                     ) : (
-                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-2xl font-bold text-foreground transition-colors duration-300">
+                        {stat.value}
+                      </p>
                     )}
                   </div>
-                  <div className={`${stat.bgColor} p-3 rounded-full`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
+                  <div className="p-3 rounded-full bg-secondary">
+                    <Icon className="w-6 h-6 text-foreground transition-colors duration-300" />
                   </div>
                 </div>
               </CardContent>
@@ -145,21 +114,23 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500">No recent activity</p>
+            <p className="text-muted-foreground">No recent activity</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-gray-500">Quick actions will appear here</p>
+            <p className="text-muted-foreground">
+              Quick actions will appear here
+            </p>
           </CardContent>
         </Card>
       </div>

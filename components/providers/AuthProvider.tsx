@@ -29,21 +29,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
 
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(profile);
+        if (user) {
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle(); // Use maybeSingle() instead of single()
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+          } else {
+            setProfile(profile);
+          }
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     getUser();
@@ -53,12 +62,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
-          .single();
-        setProfile(profile);
+          .maybeSingle(); // Use maybeSingle() instead of single()
+
+        if (error) {
+          console.error("Profile fetch error:", error);
+        } else {
+          setProfile(profile);
+        }
       } else {
         setProfile(null);
       }

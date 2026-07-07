@@ -17,16 +17,19 @@ import {
   BarChart3,
   Settings,
   Building2,
+  Database,
 } from "lucide-react";
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+}
+
+const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Assets", href: "/assets", icon: Package },
-  { name: "Categories", href: "/categories", icon: FolderTree },
-  { name: "Brands", href: "/brands", icon: Tag },
-  { name: "Manufacturers", href: "/manufacturers", icon: Factory },
-  { name: "Models", href: "/models", icon: Boxes },
-  { name: "Suppliers", href: "/suppliers", icon: Truck },
+  { name: "CMS", href: "/cms", icon: Database },
   { name: "Maintenance", href: "/maintenance", icon: Wrench },
   { name: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { name: "Users", href: "/users", icon: Users },
@@ -37,18 +40,20 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
 
+  const isActive = (href: string) => {
+    return pathname === href || pathname?.startsWith(href + "/");
+  };
+
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 min-h-screen flex flex-col transition-colors duration-300">
-      <div className="p-4 border-b border-gray-200 dark:border-slate-700">
+    <aside className="w-64 min-h-screen flex flex-col flex-shrink-0 bg-sidebar text-sidebar border-r border-sidebar transition-colors duration-300">
+      <div className="p-4 border-b border-sidebar">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600">
-            <Building2 className="w-5 h-5 text-white" />
+          <div className="p-2 rounded-lg bg-sidebar border border-sidebar">
+            <Building2 className="w-5 h-5 text-sidebar" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-              AMS
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <h1 className="text-lg font-bold text-sidebar">AMS</h1>
+            <p className="text-xs text-muted-foreground">
               Asset Monitoring System
             </p>
           </div>
@@ -58,25 +63,25 @@ export function Sidebar() {
         <ul className="space-y-1 px-3">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href || pathname?.startsWith(item.href + "/");
+            const active = isActive(item.href);
+
             return (
-              <li key={item.name}>
+              <li key={item.href}>
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                    isActive
-                      ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 shadow-sm"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white",
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
+                    active
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                   )}
                 >
                   <Icon
                     className={cn(
-                      "w-5 h-5",
-                      isActive
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-400 dark:text-gray-500",
+                      "w-5 h-5 flex-shrink-0 transition-colors duration-200",
+                      active
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground",
                     )}
                   />
                   <span className="text-sm font-medium">{item.name}</span>
@@ -86,7 +91,7 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-      <div className="p-4 border-t border-gray-200 dark:border-slate-700 text-xs text-gray-400 dark:text-gray-500">
+      <div className="p-4 border-t border-sidebar text-xs text-muted-foreground">
         v0.1.0
       </div>
     </aside>

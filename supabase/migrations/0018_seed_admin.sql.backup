@@ -1,83 +1,19 @@
--- =====================================================
--- Asset Monitoring System
--- Seed Admin Profile
--- =====================================================
--- IMPORTANT: You MUST create the admin user in Supabase Auth first!
--- 
--- Steps:
---   1. Go to Supabase Dashboard → Authentication → Users
---   2. Click "Add User"
---   3. Email: admin@example.com
---   4. Password: Choose a strong password (e.g., Admin@123!)
---   5. Check "Auto Confirm User"
---   6. Click "Create User"
---   7. Copy the User ID (UUID)
---   8. Replace the UUID below
--- =====================================================
-
--- =====================================================
--- Asset Monitoring System
--- Seed Admin Profile
--- =====================================================
-
 DO $$
 DECLARE
-    v_admin_auth_id UUID := '211b8773-ee5b-4d22-a74d-d46b1da24bfd'; -- Your actual UUID
-    v_admin_email   TEXT := 'admin@example.com';
+    v_admin_auth_id UUID := 'cd3f2764-6ad5-4df2-b061-b2f9cbd78219'; -- Replace with your actual UUID
     v_admin_role_id UUID;
     v_dept_id UUID;
     v_loc_id UUID;
-    v_user_exists BOOLEAN;
 BEGIN
     -- Get admin role
-    SELECT id INTO v_admin_role_id
-    FROM roles
-    WHERE code = 'admin';
-
-    IF v_admin_role_id IS NULL THEN
-        RAISE EXCEPTION 'Admin role not found! Run 0012_seed_data.sql first.';
-    END IF;
-
+    SELECT id INTO v_admin_role_id FROM roles WHERE code = 'admin';
+    
     -- Get admin department
-    SELECT id INTO v_dept_id
-    FROM departments
-    WHERE code = 'admin'
-    LIMIT 1;
-
-    IF v_dept_id IS NULL THEN
-        RAISE EXCEPTION 'Admin department not found! Run 0017_seed_departments_locations.sql first.';
-    END IF;
-
+    SELECT id INTO v_dept_id FROM departments WHERE code = 'admin';
+    
     -- Get admin location
-    SELECT id INTO v_loc_id
-    FROM locations
-    WHERE code = 'admin'
-    LIMIT 1;
-
-    IF v_loc_id IS NULL THEN
-        RAISE EXCEPTION 'Admin location not found! Run 0017_seed_departments_locations.sql first.';
-    END IF;
-
-    -- Try to check if auth user exists
-    BEGIN
-        SELECT EXISTS (
-            SELECT 1 
-            FROM auth.users 
-            WHERE id = v_admin_auth_id
-        ) INTO v_user_exists;
-        
-        IF v_user_exists = FALSE THEN
-            RAISE NOTICE '⚠️ WARNING: Auth user with ID % not found in auth.users', v_admin_auth_id;
-            RAISE NOTICE 'Make sure you created the admin user in Supabase Auth first!';
-        ELSE
-            RAISE NOTICE '✅ Auth user found!';
-        END IF;
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE '⚠️ Could not verify auth.users (this is normal in some contexts)';
-            RAISE NOTICE 'Assuming the user exists - if login fails, check the UUID is correct.';
-    END;
-
+    SELECT id INTO v_loc_id FROM locations WHERE code = 'admin';
+    
     -- Create admin profile
     INSERT INTO profiles (
         id,
@@ -96,46 +32,16 @@ BEGIN
         v_loc_id,
         'System',
         'Administrator',
-        v_admin_email,
+        'admin@example.com',
         TRUE
     )
     ON CONFLICT (id) DO NOTHING;
-
-    IF FOUND THEN
-        RAISE NOTICE '✅ Admin profile created successfully for %', v_admin_email;
-    ELSE
-        RAISE NOTICE 'ℹ️ Admin profile already exists for %', v_admin_email;
-    END IF;
-END $$;
-
--- Verify the setup
-DO $$
-DECLARE
-    v_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO v_count
-    FROM profiles p
-    WHERE p.email = 'admin@example.com';
     
-    IF v_count > 0 THEN
-        RAISE NOTICE '✅ Admin profile verified in database!';
-    ELSE
-        RAISE NOTICE '⚠️ Admin profile not found. Please check the UUID and try again.';
-    END IF;
+    RAISE NOTICE '✅ Admin profile created successfully!';
 END $$;
 
--- Optional: View the admin profile (uncomment to see details)
--- SELECT 
---     p.id,
---     p.email,
---     p.display_name,
---     p.first_name,
---     p.last_name,
---     r.name as role_name,
---     d.name as department,
---     l.name as location
--- FROM profiles p
--- LEFT JOIN roles r ON r.id = p.role_id
--- LEFT JOIN departments d ON d.id = p.department_id
--- LEFT JOIN locations l ON l.id = p.location_id
--- WHERE p.email = 'admin@example.com';
+-- Verify
+SELECT p.*, r.name as role_name 
+FROM profiles p
+JOIN roles r ON r.id = p.role_id
+WHERE p.email = 'admin@example.com';
