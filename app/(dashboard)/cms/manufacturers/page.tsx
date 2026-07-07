@@ -14,10 +14,8 @@ import {
 import { Card, CardContent } from "@/components/ui/Card";
 import {
   Plus,
-  Search,
   Edit,
   Trash2,
-  X,
   Check,
   Loader2,
   Lock,
@@ -27,15 +25,16 @@ import {
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PaginatedTable } from "@/components/ui/PaginatedTable";
 import { usePermission } from "@/hooks/usePermissions";
 import { Manufacturer } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDuplicateError } from "@/lib/validation";
 
 export default function ManufacturersPage() {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingManufacturer, setEditingManufacturer] =
     useState<Manufacturer | null>(null);
@@ -84,7 +83,7 @@ export default function ManufacturersPage() {
       setManufacturers(data || []);
     } catch (error: any) {
       console.error("Error loading manufacturers:", error);
-      toast.error("Failed to load manufacturers");
+      toast.error("Failed to load manufacturers", { position: "top-center" });
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -116,21 +115,41 @@ export default function ManufacturersPage() {
           .from("manufacturers")
           .update(formData)
           .eq("id", editingManufacturer.id);
-        if (error) throw error;
-        toast.success("Manufacturer updated successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Manufacturer")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Manufacturer updated successfully!", {
+          position: "top-center",
+        });
       } else {
         const { error } = await supabase
           .from("manufacturers")
           .insert([{ ...formData, is_active: true }]);
-        if (error) throw error;
-        toast.success("Manufacturer created successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Manufacturer")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Manufacturer created successfully!", {
+          position: "top-center",
+        });
       }
 
       await loadManufacturers();
       closeModal();
     } catch (error: any) {
       console.error("Error saving manufacturer:", error);
-      toast.error(error.message || "Failed to save manufacturer");
+      toast.error(error.message || "Failed to save manufacturer", {
+        position: "top-center",
+      });
       setFormErrors({ submit: error.message || "Failed to save manufacturer" });
     } finally {
       setIsSubmitting(false);
@@ -162,13 +181,17 @@ export default function ManufacturersPage() {
         .from("manufacturers")
         .update({ is_active: false, deleted_at: new Date().toISOString() })
         .eq("id", id);
-      if (error) throw error;
 
-      toast.success("Manufacturer deleted successfully!");
+      if (error) throw error;
+      toast.success("Manufacturer deleted successfully!", {
+        position: "top-center",
+      });
       await loadManufacturers();
     } catch (error: any) {
       console.error("Error deleting manufacturer:", error);
-      toast.error(error.message || "Failed to delete manufacturer");
+      toast.error(error.message || "Failed to delete manufacturer", {
+        position: "top-center",
+      });
     }
   };
 
@@ -260,17 +283,10 @@ export default function ManufacturersPage() {
     });
   };
 
-  const filteredManufacturers = manufacturers.filter(
-    (m) =>
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.country_of_origin?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#888888] dark:text-[#B0B0B0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -280,13 +296,13 @@ export default function ManufacturersPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 text-center">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-destructive/10 mb-4">
+              <Lock className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-[#E0E0E0] mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Access Denied
             </h3>
-            <p className="text-sm text-[#888888] dark:text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               You don't have permission to view manufacturers. Please contact
               your administrator.
             </p>
@@ -298,57 +314,38 @@ export default function ManufacturersPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
-          <Input
-            className="pl-9"
-            placeholder="Search manufacturers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888888] dark:text-[#B0B0B0] hover:text-[#121212] dark:hover:text-[#E0E0E0]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total:{" "}
+            <strong className="text-foreground font-semibold">
+              {manufacturers.length}
+            </strong>
+          </span>
+          <span>
+            Active:{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              {manufacturers.filter((m) => m.is_active).length}
+            </strong>
+          </span>
         </div>
         {canManage && (
-          <Button onClick={() => openModal()} className="flex-shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => openModal()}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Manufacturer
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-4 text-sm text-[#888888] dark:text-[#B0B0B0]">
-        <span>
-          Total:{" "}
-          <strong className="text-[#121212] dark:text-[#E0E0E0]">
-            {manufacturers.length}
-          </strong>
-        </span>
-        <span>
-          Active:{" "}
-          <strong className="text-green-600 dark:text-green-400">
-            {manufacturers.filter((m) => m.is_active).length}
-          </strong>
-        </span>
-        {searchTerm && (
-          <span>
-            Results:{" "}
-            <strong className="text-[#121212] dark:text-[#E0E0E0]">
-              {filteredManufacturers.length}
-            </strong>
-          </span>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
+      <PaginatedTable
+        data={manufacturers}
+        searchFields={["name", "code", "country_of_origin"]}
+        searchPlaceholder="Search manufacturers..."
+      >
+        {(paginatedData) => (
           <Table>
             <TableHead>
               <TableRow>
@@ -363,145 +360,108 @@ export default function ManufacturersPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-[#888888] dark:text-[#B0B0B0]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading manufacturers...
-                    </div>
+              {paginatedData.map((manufacturer) => (
+                <TableRow key={manufacturer.id}>
+                  <TableCell className="text-foreground font-medium">
+                    {manufacturer.code}
                   </TableCell>
-                </TableRow>
-              ) : filteredManufacturers.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-[#888888] dark:text-[#B0B0B0]"
-                  >
-                    {searchTerm ? (
-                      <>
-                        No manufacturers found matching "
-                        <strong>{searchTerm}</strong>"
-                      </>
+                  <TableCell className="text-foreground">
+                    {manufacturer.name}
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    {manufacturer.country_of_origin || "-"}
+                  </TableCell>
+                  <TableCell>
+                    {manufacturer.website_url ? (
+                      <a
+                        href={manufacturer.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-foreground hover:underline inline-flex items-center gap-1"
+                      >
+                        Visit
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
                     ) : (
-                      <>
-                        No manufacturers found.{" "}
-                        {canManage && (
-                          <button
-                            onClick={() => openModal()}
-                            className="text-[#121212] dark:text-[#E0E0E0] hover:underline"
-                          >
-                            Create your first manufacturer!
-                          </button>
-                        )}
-                      </>
+                      "-"
                     )}
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredManufacturers.map((manufacturer) => (
-                  <TableRow key={manufacturer.id}>
-                    <TableCell className="font-medium text-[#121212] dark:text-[#E0E0E0]">
-                      {manufacturer.code}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {manufacturer.name}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {manufacturer.country_of_origin || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {manufacturer.website_url ? (
-                        <a
-                          href={manufacturer.website_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[#121212] dark:text-[#E0E0E0] hover:underline inline-flex items-center gap-1"
-                        >
-                          Visit
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ) : (
-                        "-"
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                        manufacturer.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                          manufacturer.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                        )}
-                      >
-                        {manufacturer.is_active ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          "Inactive"
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManage ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(manufacturer)}
-                              className="hover:bg-[#F4F4F4] dark:hover:bg-[#2C2C2C]"
-                              title="Edit manufacturer"
-                            >
-                              <Edit className="w-4 h-4 text-[#121212] dark:text-[#E0E0E0]" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteConfirm(
-                                  manufacturer.id,
-                                  manufacturer.name,
-                                )
-                              }
-                              className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete manufacturer"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </>
-                        ) : (
+                    >
+                      {manufacturer.is_active ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Active
+                        </>
+                      ) : (
+                        "Inactive"
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage ? (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="cursor-default"
-                            title="View only"
+                            onClick={() => openModal(manufacturer)}
+                            className="hover:bg-secondary"
+                            title="Edit manufacturer"
                           >
-                            <Eye className="w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
+                            <Edit className="w-4 h-4 text-foreground" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteConfirm(
+                                manufacturer.id,
+                                manufacturer.name,
+                              )
+                            }
+                            className="hover:bg-destructive/10"
+                            title="Delete manufacturer"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-default"
+                          title="View only"
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </PaginatedTable>
 
-      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingManufacturer ? "Edit Manufacturer" : "Add Manufacturer"}
         className="max-w-md"
+        staticBackdrop={true}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formErrors.submit && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-sm text-red-600 dark:text-red-400">
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
               {formErrors.submit}
             </div>
           )}
@@ -554,7 +514,7 @@ export default function ManufacturersPage() {
             }
             placeholder="https://example.com"
           />
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0E0E0] dark:border-[#444444]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               variant="ghost"
               onClick={closeModal}
@@ -579,7 +539,6 @@ export default function ManufacturersPage() {
         </form>
       </Modal>
 
-      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
@@ -596,6 +555,7 @@ export default function ManufacturersPage() {
         cancelText="Cancel"
         variant={confirmDialog.variant || "danger"}
         isLoading={isSubmitting}
+        staticBackdrop={true}
       />
     </div>
   );

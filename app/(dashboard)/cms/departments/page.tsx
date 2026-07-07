@@ -12,29 +12,20 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  X,
-  Check,
-  Loader2,
-  Lock,
-  Eye,
-} from "lucide-react";
+import { Plus, Edit, Trash2, Check, Loader2, Lock, Eye } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PaginatedTable } from "@/components/ui/PaginatedTable";
 import { usePermission } from "@/hooks/usePermissions";
 import { Department } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDuplicateError } from "@/lib/validation";
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(
     null,
@@ -82,7 +73,7 @@ export default function DepartmentsPage() {
       setDepartments(data || []);
     } catch (error: any) {
       console.error("Error loading departments:", error);
-      toast.error("Failed to load departments");
+      toast.error("Failed to load departments", { position: "top-center" });
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -114,21 +105,41 @@ export default function DepartmentsPage() {
           .from("departments")
           .update(formData)
           .eq("id", editingDepartment.id);
-        if (error) throw error;
-        toast.success("Department updated successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Department")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Department updated successfully!", {
+          position: "top-center",
+        });
       } else {
         const { error } = await supabase
           .from("departments")
           .insert([{ ...formData, is_active: true }]);
-        if (error) throw error;
-        toast.success("Department created successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Department")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Department created successfully!", {
+          position: "top-center",
+        });
       }
 
       await loadDepartments();
       closeModal();
     } catch (error: any) {
       console.error("Error saving department:", error);
-      toast.error(error.message || "Failed to save department");
+      toast.error(error.message || "Failed to save department", {
+        position: "top-center",
+      });
       setFormErrors({ submit: error.message || "Failed to save department" });
     } finally {
       setIsSubmitting(false);
@@ -160,13 +171,17 @@ export default function DepartmentsPage() {
         .from("departments")
         .update({ is_active: false, deleted_at: new Date().toISOString() })
         .eq("id", id);
-      if (error) throw error;
 
-      toast.success("Department deleted successfully!");
+      if (error) throw error;
+      toast.success("Department deleted successfully!", {
+        position: "top-center",
+      });
       await loadDepartments();
     } catch (error: any) {
       console.error("Error deleting department:", error);
-      toast.error(error.message || "Failed to delete department");
+      toast.error(error.message || "Failed to delete department", {
+        position: "top-center",
+      });
     }
   };
 
@@ -244,16 +259,10 @@ export default function DepartmentsPage() {
     });
   };
 
-  const filteredDepartments = departments.filter(
-    (d) =>
-      d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.code.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#888888] dark:text-[#B0B0B0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -263,13 +272,13 @@ export default function DepartmentsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 text-center">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-destructive/10 mb-4">
+              <Lock className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-[#E0E0E0] mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Access Denied
             </h3>
-            <p className="text-sm text-[#888888] dark:text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               You don't have permission to view departments. Please contact your
               administrator.
             </p>
@@ -281,57 +290,38 @@ export default function DepartmentsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
-          <Input
-            className="pl-9"
-            placeholder="Search departments..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888888] dark:text-[#B0B0B0] hover:text-[#121212] dark:hover:text-[#E0E0E0]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total:{" "}
+            <strong className="text-foreground font-semibold">
+              {departments.length}
+            </strong>
+          </span>
+          <span>
+            Active:{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              {departments.filter((d) => d.is_active).length}
+            </strong>
+          </span>
         </div>
         {canManage && (
-          <Button onClick={() => openModal()} className="flex-shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => openModal()}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Department
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-4 text-sm text-[#888888] dark:text-[#B0B0B0]">
-        <span>
-          Total:{" "}
-          <strong className="text-[#121212] dark:text-[#E0E0E0]">
-            {departments.length}
-          </strong>
-        </span>
-        <span>
-          Active:{" "}
-          <strong className="text-green-600 dark:text-green-400">
-            {departments.filter((d) => d.is_active).length}
-          </strong>
-        </span>
-        {searchTerm && (
-          <span>
-            Results:{" "}
-            <strong className="text-[#121212] dark:text-[#E0E0E0]">
-              {filteredDepartments.length}
-            </strong>
-          </span>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
+      <PaginatedTable
+        data={departments}
+        searchFields={["name", "code"]}
+        searchPlaceholder="Search departments..."
+      >
+        {(paginatedData) => (
           <Table>
             <TableHead>
               <TableRow>
@@ -345,130 +335,93 @@ export default function DepartmentsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-[#888888] dark:text-[#B0B0B0]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading departments...
-                    </div>
+              {paginatedData.map((department) => (
+                <TableRow key={department.id}>
+                  <TableCell className="text-foreground font-medium">
+                    {department.code}
                   </TableCell>
-                </TableRow>
-              ) : filteredDepartments.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-[#888888] dark:text-[#B0B0B0]"
-                  >
-                    {searchTerm ? (
-                      <>
-                        No departments found matching "
-                        <strong>{searchTerm}</strong>"
-                      </>
-                    ) : (
-                      <>
-                        No departments found.{" "}
-                        {canManage && (
-                          <button
-                            onClick={() => openModal()}
-                            className="text-[#121212] dark:text-[#E0E0E0] hover:underline"
-                          >
-                            Create your first department!
-                          </button>
-                        )}
-                      </>
-                    )}
+                  <TableCell className="text-foreground">
+                    {department.name}
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredDepartments.map((department) => (
-                  <TableRow key={department.id}>
-                    <TableCell className="font-medium text-[#121212] dark:text-[#E0E0E0]">
-                      {department.code}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {department.name}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {department.description || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                          department.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                        )}
-                      >
-                        {department.is_active ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          "Inactive"
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManage ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(department)}
-                              className="hover:bg-[#F4F4F4] dark:hover:bg-[#2C2C2C]"
-                              title="Edit department"
-                            >
-                              <Edit className="w-4 h-4 text-[#121212] dark:text-[#E0E0E0]" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteConfirm(
-                                  department.id,
-                                  department.name,
-                                )
-                              }
-                              className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete department"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </>
-                        ) : (
+                  <TableCell className="text-foreground">
+                    {department.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                        department.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                      )}
+                    >
+                      {department.is_active ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Active
+                        </>
+                      ) : (
+                        "Inactive"
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage ? (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="cursor-default"
-                            title="View only"
+                            onClick={() => openModal(department)}
+                            className="hover:bg-secondary"
+                            title="Edit department"
                           >
-                            <Eye className="w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
+                            <Edit className="w-4 h-4 text-foreground" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteConfirm(
+                                department.id,
+                                department.name,
+                              )
+                            }
+                            className="hover:bg-destructive/10"
+                            title="Delete department"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-default"
+                          title="View only"
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </PaginatedTable>
 
-      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingDepartment ? "Edit Department" : "Add Department"}
         className="max-w-md"
+        staticBackdrop={true}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formErrors.submit && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-sm text-red-600 dark:text-red-400">
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
               {formErrors.submit}
             </div>
           )}
@@ -504,7 +457,7 @@ export default function DepartmentsPage() {
             }
             placeholder="Brief description of the department"
           />
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0E0E0] dark:border-[#444444]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               variant="ghost"
               onClick={closeModal}
@@ -529,7 +482,6 @@ export default function DepartmentsPage() {
         </form>
       </Modal>
 
-      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
@@ -546,6 +498,7 @@ export default function DepartmentsPage() {
         cancelText="Cancel"
         variant={confirmDialog.variant || "danger"}
         isLoading={isSubmitting}
+        staticBackdrop={true}
       />
     </div>
   );

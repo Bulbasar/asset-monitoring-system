@@ -25,7 +25,15 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             {children}
-            <Toaster position="top-right" richColors />
+            <Toaster
+              position="top-center"
+              richColors
+              expand={false}
+              closeButton
+              toastOptions={{
+                duration: 3000,
+              }}
+            />
           </AuthProvider>
         </ThemeProvider>
       </body>

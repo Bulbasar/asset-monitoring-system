@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -10,6 +10,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  staticBackdrop?: boolean;
 }
 
 export function Modal({
@@ -18,32 +19,76 @@ export function Modal({
   title,
   children,
   className,
+  staticBackdrop = false,
 }: ModalProps) {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // Trigger animation after a tiny delay
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+      // Wait for animation to finish before unmounting
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !staticBackdrop) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose, staticBackdrop]);
+
+  if (!shouldRender) return null;
+
+  const handleBackdropClick = () => {
+    if (!staticBackdrop) {
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      {/* Backdrop with animation */}
       <div
         className={cn(
-          "relative bg-card rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto border border-border transition-colors duration-300",
+          "fixed inset-0 transition-all duration-300 ease-out",
+          isAnimating ? "opacity-100" : "opacity-0",
+        )}
+        style={{
+          background: "rgba(0, 0, 0, 0.5)",
+          backdropFilter: "blur(4px)",
+        }}
+        onClick={handleBackdropClick}
+      />
+
+      {/* Modal with animation */}
+      <div
+        className={cn(
+          "relative bg-card rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto border border-border transition-all duration-300 ease-out",
+          isAnimating
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4",
           className,
         )}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-300"
+          className="absolute top-4 right-4 p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-300 z-10"
         >
           <X className="w-5 h-5" />
         </button>

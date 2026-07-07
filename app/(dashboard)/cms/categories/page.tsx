@@ -12,29 +12,20 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  X,
-  Check,
-  Loader2,
-  Lock,
-  Eye,
-} from "lucide-react";
+import { Plus, Edit, Trash2, Check, Loader2, Lock, Eye } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PaginatedTable } from "@/components/ui/PaginatedTable";
 import { usePermission } from "@/hooks/usePermissions";
 import { Category } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDuplicateError } from "@/lib/validation";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +71,7 @@ export default function CategoriesPage() {
       setCategories(data || []);
     } catch (error: any) {
       console.error("Error loading categories:", error);
-      toast.error("Failed to load categories");
+      toast.error("Failed to load categories", { position: "top-center" });
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -112,21 +103,41 @@ export default function CategoriesPage() {
           .from("categories")
           .update(formData)
           .eq("id", editingCategory.id);
-        if (error) throw error;
-        toast.success("Category updated successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Category")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Category updated successfully!", {
+          position: "top-center",
+        });
       } else {
         const { error } = await supabase
           .from("categories")
           .insert([{ ...formData, is_active: true }]);
-        if (error) throw error;
-        toast.success("Category created successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Category")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Category created successfully!", {
+          position: "top-center",
+        });
       }
 
       await loadCategories();
       closeModal();
     } catch (error: any) {
       console.error("Error saving category:", error);
-      toast.error(error.message || "Failed to save category");
+      toast.error(error.message || "Failed to save category", {
+        position: "top-center",
+      });
       setFormErrors({ submit: error.message || "Failed to save category" });
     } finally {
       setIsSubmitting(false);
@@ -158,13 +169,17 @@ export default function CategoriesPage() {
         .from("categories")
         .update({ is_active: false, deleted_at: new Date().toISOString() })
         .eq("id", id);
-      if (error) throw error;
 
-      toast.success("Category deleted successfully!");
+      if (error) throw error;
+      toast.success("Category deleted successfully!", {
+        position: "top-center",
+      });
       await loadCategories();
     } catch (error: any) {
       console.error("Error deleting category:", error);
-      toast.error(error.message || "Failed to delete category");
+      toast.error(error.message || "Failed to delete category", {
+        position: "top-center",
+      });
     }
   };
 
@@ -242,16 +257,10 @@ export default function CategoriesPage() {
     });
   };
 
-  const filteredCategories = categories.filter(
-    (cat) =>
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cat.code.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#888888] dark:text-[#B0B0B0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -261,13 +270,13 @@ export default function CategoriesPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 text-center">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-destructive/10 mb-4">
+              <Lock className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-[#E0E0E0] mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Access Denied
             </h3>
-            <p className="text-sm text-[#888888] dark:text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               You don't have permission to view categories. Please contact your
               administrator.
             </p>
@@ -279,57 +288,38 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
-          <Input
-            className="pl-9"
-            placeholder="Search categories..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888888] dark:text-[#B0B0B0] hover:text-[#121212] dark:hover:text-[#E0E0E0]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total:{" "}
+            <strong className="text-foreground font-semibold">
+              {categories.length}
+            </strong>
+          </span>
+          <span>
+            Active:{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              {categories.filter((c) => c.is_active).length}
+            </strong>
+          </span>
         </div>
         {canManage && (
-          <Button onClick={() => openModal()} className="flex-shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => openModal()}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Category
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-4 text-sm text-[#888888] dark:text-[#B0B0B0]">
-        <span>
-          Total:{" "}
-          <strong className="text-[#121212] dark:text-[#E0E0E0]">
-            {categories.length}
-          </strong>
-        </span>
-        <span>
-          Active:{" "}
-          <strong className="text-green-600 dark:text-green-400">
-            {categories.filter((c) => c.is_active).length}
-          </strong>
-        </span>
-        {searchTerm && (
-          <span>
-            Results:{" "}
-            <strong className="text-[#121212] dark:text-[#E0E0E0]">
-              {filteredCategories.length}
-            </strong>
-          </span>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
+      <PaginatedTable
+        data={categories}
+        searchFields={["name", "code"]}
+        searchPlaceholder="Search categories..."
+      >
+        {(paginatedData) => (
           <Table>
             <TableHead>
               <TableRow>
@@ -343,127 +333,90 @@ export default function CategoriesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-[#888888] dark:text-[#B0B0B0]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading categories...
-                    </div>
+              {paginatedData.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell className="text-foreground font-medium">
+                    {category.code}
                   </TableCell>
-                </TableRow>
-              ) : filteredCategories.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-[#888888] dark:text-[#B0B0B0]"
-                  >
-                    {searchTerm ? (
-                      <>
-                        No categories found matching "
-                        <strong>{searchTerm}</strong>"
-                      </>
-                    ) : (
-                      <>
-                        No categories found.{" "}
-                        {canManage && (
-                          <button
-                            onClick={() => openModal()}
-                            className="text-[#121212] dark:text-[#E0E0E0] hover:underline"
-                          >
-                            Create your first category!
-                          </button>
-                        )}
-                      </>
-                    )}
+                  <TableCell className="text-foreground">
+                    {category.name}
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredCategories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium text-[#121212] dark:text-[#E0E0E0]">
-                      {category.code}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {category.name}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {category.description || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                          category.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                        )}
-                      >
-                        {category.is_active ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          "Inactive"
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManage ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(category)}
-                              className="hover:bg-[#F4F4F4] dark:hover:bg-[#2C2C2C]"
-                              title="Edit category"
-                            >
-                              <Edit className="w-4 h-4 text-[#121212] dark:text-[#E0E0E0]" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteConfirm(category.id, category.name)
-                              }
-                              className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete category"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </>
-                        ) : (
+                  <TableCell className="text-foreground">
+                    {category.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                        category.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                      )}
+                    >
+                      {category.is_active ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Active
+                        </>
+                      ) : (
+                        "Inactive"
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage ? (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="cursor-default"
-                            title="View only"
+                            onClick={() => openModal(category)}
+                            className="hover:bg-secondary"
+                            title="Edit category"
                           >
-                            <Eye className="w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
+                            <Edit className="w-4 h-4 text-foreground" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteConfirm(category.id, category.name)
+                            }
+                            className="hover:bg-destructive/10"
+                            title="Delete category"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-default"
+                          title="View only"
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </PaginatedTable>
 
-      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingCategory ? "Edit Category" : "Add Category"}
         className="max-w-md"
+        staticBackdrop={true}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formErrors.submit && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-sm text-red-600 dark:text-red-400">
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
               {formErrors.submit}
             </div>
           )}
@@ -499,7 +452,7 @@ export default function CategoriesPage() {
             }
             placeholder="Brief description of the category"
           />
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0E0E0] dark:border-[#444444]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               variant="ghost"
               onClick={closeModal}
@@ -524,7 +477,6 @@ export default function CategoriesPage() {
         </form>
       </Modal>
 
-      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
@@ -541,6 +493,7 @@ export default function CategoriesPage() {
         cancelText="Cancel"
         variant={confirmDialog.variant || "danger"}
         isLoading={isSubmitting}
+        staticBackdrop={true}
       />
     </div>
   );

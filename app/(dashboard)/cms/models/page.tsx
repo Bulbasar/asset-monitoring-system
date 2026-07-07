@@ -12,31 +12,22 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  X,
-  Check,
-  Loader2,
-  Lock,
-  Eye,
-} from "lucide-react";
+import { Plus, Edit, Trash2, Check, Loader2, Lock, Eye } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { PaginatedTable } from "@/components/ui/PaginatedTable";
 import { usePermission } from "@/hooks/usePermissions";
 import { Model } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDuplicateError } from "@/lib/validation";
 
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +86,7 @@ export default function ModelsPage() {
       setBrands(brandsRes.data || []);
     } catch (error: any) {
       console.error("Error loading models:", error);
-      toast.error("Failed to load models");
+      toast.error("Failed to load models", { position: "top-center" });
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -128,21 +119,41 @@ export default function ModelsPage() {
           .from("models")
           .update(formData)
           .eq("id", editingModel.id);
-        if (error) throw error;
-        toast.success("Model updated successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Model")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Model updated successfully!", {
+          position: "top-center",
+        });
       } else {
         const { error } = await supabase
           .from("models")
           .insert([{ ...formData, is_active: true }]);
-        if (error) throw error;
-        toast.success("Model created successfully!");
+
+        if (error) {
+          if (handleDuplicateError(error, "Model")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Model created successfully!", {
+          position: "top-center",
+        });
       }
 
       await loadData();
       closeModal();
     } catch (error: any) {
       console.error("Error saving model:", error);
-      toast.error(error.message || "Failed to save model");
+      toast.error(error.message || "Failed to save model", {
+        position: "top-center",
+      });
       setFormErrors({ submit: error.message || "Failed to save model" });
     } finally {
       setIsSubmitting(false);
@@ -174,13 +185,15 @@ export default function ModelsPage() {
         .from("models")
         .update({ is_active: false, deleted_at: new Date().toISOString() })
         .eq("id", id);
-      if (error) throw error;
 
-      toast.success("Model deleted successfully!");
+      if (error) throw error;
+      toast.success("Model deleted successfully!", { position: "top-center" });
       await loadData();
     } catch (error: any) {
       console.error("Error deleting model:", error);
-      toast.error(error.message || "Failed to delete model");
+      toast.error(error.message || "Failed to delete model", {
+        position: "top-center",
+      });
     }
   };
 
@@ -272,18 +285,10 @@ export default function ModelsPage() {
     });
   };
 
-  const filteredModels = models.filter(
-    (m) =>
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.model_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.brands?.name?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#888888] dark:text-[#B0B0B0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -293,13 +298,13 @@ export default function ModelsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 text-center">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-destructive/10 mb-4">
+              <Lock className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-[#E0E0E0] mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Access Denied
             </h3>
-            <p className="text-sm text-[#888888] dark:text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               You don't have permission to view models. Please contact your
               administrator.
             </p>
@@ -311,57 +316,38 @@ export default function ModelsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
-          <Input
-            className="pl-9"
-            placeholder="Search models..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888888] dark:text-[#B0B0B0] hover:text-[#121212] dark:hover:text-[#E0E0E0]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total:{" "}
+            <strong className="text-foreground font-semibold">
+              {models.length}
+            </strong>
+          </span>
+          <span>
+            Active:{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              {models.filter((m) => m.is_active).length}
+            </strong>
+          </span>
         </div>
         {canManage && (
-          <Button onClick={() => openModal()} className="flex-shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => openModal()}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Model
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-4 text-sm text-[#888888] dark:text-[#B0B0B0]">
-        <span>
-          Total:{" "}
-          <strong className="text-[#121212] dark:text-[#E0E0E0]">
-            {models.length}
-          </strong>
-        </span>
-        <span>
-          Active:{" "}
-          <strong className="text-green-600 dark:text-green-400">
-            {models.filter((m) => m.is_active).length}
-          </strong>
-        </span>
-        {searchTerm && (
-          <span>
-            Results:{" "}
-            <strong className="text-[#121212] dark:text-[#E0E0E0]">
-              {filteredModels.length}
-            </strong>
-          </span>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
+      <PaginatedTable
+        data={models}
+        searchFields={["name", "code", "model_number", "brands.name"]}
+        searchPlaceholder="Search models..."
+      >
+        {(paginatedData) => (
           <Table>
             <TableHead>
               <TableRow>
@@ -376,129 +362,93 @@ export default function ModelsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-[#888888] dark:text-[#B0B0B0]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading models...
-                    </div>
+              {paginatedData.map((model) => (
+                <TableRow key={model.id}>
+                  <TableCell className="text-foreground font-medium">
+                    {model.code}
                   </TableCell>
-                </TableRow>
-              ) : filteredModels.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-[#888888] dark:text-[#B0B0B0]"
-                  >
-                    {searchTerm ? (
-                      <>
-                        No models found matching "<strong>{searchTerm}</strong>"
-                      </>
-                    ) : (
-                      <>
-                        No models found.{" "}
-                        {canManage && (
-                          <button
-                            onClick={() => openModal()}
-                            className="text-[#121212] dark:text-[#E0E0E0] hover:underline"
-                          >
-                            Create your first model!
-                          </button>
-                        )}
-                      </>
-                    )}
+                  <TableCell className="text-foreground">
+                    {model.name}
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredModels.map((model) => (
-                  <TableRow key={model.id}>
-                    <TableCell className="font-medium text-[#121212] dark:text-[#E0E0E0]">
-                      {model.code}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {model.name}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {model.model_number || "-"}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {model.brands?.name || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                          model.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                        )}
-                      >
-                        {model.is_active ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          "Inactive"
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManage ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(model)}
-                              className="hover:bg-[#F4F4F4] dark:hover:bg-[#2C2C2C]"
-                              title="Edit model"
-                            >
-                              <Edit className="w-4 h-4 text-[#121212] dark:text-[#E0E0E0]" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteConfirm(model.id, model.name)
-                              }
-                              className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete model"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </>
-                        ) : (
+                  <TableCell className="text-foreground">
+                    {model.model_number || "-"}
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    {model.brands?.name || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                        model.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                      )}
+                    >
+                      {model.is_active ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Active
+                        </>
+                      ) : (
+                        "Inactive"
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage ? (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="cursor-default"
-                            title="View only"
+                            onClick={() => openModal(model)}
+                            className="hover:bg-secondary"
+                            title="Edit model"
                           >
-                            <Eye className="w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
+                            <Edit className="w-4 h-4 text-foreground" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteConfirm(model.id, model.name)
+                            }
+                            className="hover:bg-destructive/10"
+                            title="Delete model"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-default"
+                          title="View only"
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </PaginatedTable>
 
-      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingModel ? "Edit Model" : "Add Model"}
         className="max-w-md"
+        staticBackdrop={true}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formErrors.submit && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-sm text-red-600 dark:text-red-400">
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
               {formErrors.submit}
             </div>
           )}
@@ -557,7 +507,7 @@ export default function ModelsPage() {
             }
             placeholder="Brief description of the model"
           />
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0E0E0] dark:border-[#444444]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               variant="ghost"
               onClick={closeModal}
@@ -582,7 +532,6 @@ export default function ModelsPage() {
         </form>
       </Modal>
 
-      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
@@ -599,6 +548,7 @@ export default function ModelsPage() {
         cancelText="Cancel"
         variant={confirmDialog.variant || "danger"}
         isLoading={isSubmitting}
+        staticBackdrop={true}
       />
     </div>
   );

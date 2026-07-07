@@ -12,31 +12,22 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  X,
-  Check,
-  Loader2,
-  Lock,
-  Eye,
-} from "lucide-react";
+import { Plus, Edit, Trash2, Check, Loader2, Lock, Eye } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { PaginatedTable } from "@/components/ui/PaginatedTable";
 import { usePermission } from "@/hooks/usePermissions";
 import { Brand } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { handleDuplicateError } from "@/lib/validation";
 
 export default function BrandsPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [manufacturers, setManufacturers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,7 +89,7 @@ export default function BrandsPage() {
       setManufacturers(manufacturersRes.data || []);
     } catch (error: any) {
       console.error("Error loading brands:", error);
-      toast.error("Failed to load brands");
+      toast.error("Failed to load brands", { position: "top-center" });
     } finally {
       setLoading(false);
       setIsInitialLoad(false);
@@ -138,22 +129,40 @@ export default function BrandsPage() {
           })
           .eq("id", editingBrand.id);
 
-        if (error) throw error;
-        toast.success("Brand updated successfully!");
+        if (error) {
+          if (handleDuplicateError(error, "Brand")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Brand updated successfully!", {
+          position: "top-center",
+        });
       } else {
         const { error } = await supabase
           .from("brands")
           .insert([{ ...formData, is_active: true }]);
 
-        if (error) throw error;
-        toast.success("Brand created successfully!");
+        if (error) {
+          if (handleDuplicateError(error, "Brand")) {
+            setIsSubmitting(false);
+            return;
+          }
+          throw error;
+        }
+        toast.success("Brand created successfully!", {
+          position: "top-center",
+        });
       }
 
       await loadData();
       closeModal();
     } catch (error: any) {
       console.error("Error saving brand:", error);
-      toast.error(error.message || "Failed to save brand");
+      toast.error(error.message || "Failed to save brand", {
+        position: "top-center",
+      });
       setFormErrors({ submit: error.message || "Failed to save brand" });
     } finally {
       setIsSubmitting(false);
@@ -187,11 +196,13 @@ export default function BrandsPage() {
         .eq("id", id);
 
       if (error) throw error;
-      toast.success("Brand deleted successfully!");
+      toast.success("Brand deleted successfully!", { position: "top-center" });
       await loadData();
     } catch (error: any) {
       console.error("Error deleting brand:", error);
-      toast.error(error.message || "Failed to delete brand");
+      toast.error(error.message || "Failed to delete brand", {
+        position: "top-center",
+      });
     }
   };
 
@@ -280,17 +291,10 @@ export default function BrandsPage() {
     });
   };
 
-  const filteredBrands = brands.filter(
-    (b) =>
-      b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.manufacturers?.name?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#888888] dark:text-[#B0B0B0]" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -300,13 +304,13 @@ export default function BrandsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 text-center">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-destructive/10 mb-4">
+              <Lock className="w-8 h-8 text-destructive" />
             </div>
-            <h3 className="text-lg font-semibold text-[#121212] dark:text-[#E0E0E0] mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Access Denied
             </h3>
-            <p className="text-sm text-[#888888] dark:text-[#B0B0B0]">
+            <p className="text-sm text-muted-foreground">
               You don't have permission to view brands. Please contact your
               administrator.
             </p>
@@ -318,57 +322,38 @@ export default function BrandsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <div className="relative flex-1 max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
-          <Input
-            className="pl-9"
-            placeholder="Search brands by name, code, or manufacturer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#888888] dark:text-[#B0B0B0] hover:text-[#121212] dark:hover:text-[#E0E0E0]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>
+            Total:{" "}
+            <strong className="text-foreground font-semibold">
+              {brands.length}
+            </strong>
+          </span>
+          <span>
+            Active:{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              {brands.filter((b) => b.is_active).length}
+            </strong>
+          </span>
         </div>
         {canManage && (
-          <Button onClick={() => openModal()} className="flex-shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => openModal()}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
             Add Brand
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-4 mb-4 text-sm text-[#888888] dark:text-[#B0B0B0]">
-        <span>
-          Total:{" "}
-          <strong className="text-[#121212] dark:text-[#E0E0E0]">
-            {brands.length}
-          </strong>
-        </span>
-        <span>
-          Active:{" "}
-          <strong className="text-green-600 dark:text-green-400">
-            {brands.filter((b) => b.is_active).length}
-          </strong>
-        </span>
-        {searchTerm && (
-          <span>
-            Results:{" "}
-            <strong className="text-[#121212] dark:text-[#E0E0E0]">
-              {filteredBrands.length}
-            </strong>
-          </span>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
+      <PaginatedTable
+        data={brands}
+        searchFields={["name", "code", "manufacturers.name"]}
+        searchPlaceholder="Search brands by name, code, or manufacturer..."
+      >
+        {(paginatedData) => (
           <Table>
             <TableHead>
               <TableRow>
@@ -383,129 +368,93 @@ export default function BrandsPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-[#888888] dark:text-[#B0B0B0]">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Loading brands...
-                    </div>
+              {paginatedData.map((brand) => (
+                <TableRow key={brand.id}>
+                  <TableCell className="text-foreground font-medium">
+                    {brand.code}
                   </TableCell>
-                </TableRow>
-              ) : filteredBrands.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-[#888888] dark:text-[#B0B0B0]"
-                  >
-                    {searchTerm ? (
-                      <>
-                        No brands found matching "<strong>{searchTerm}</strong>"
-                      </>
-                    ) : (
-                      <>
-                        No brands found.{" "}
-                        {canManage && (
-                          <button
-                            onClick={() => openModal()}
-                            className="text-[#121212] dark:text-[#E0E0E0] hover:underline"
-                          >
-                            Create your first brand!
-                          </button>
-                        )}
-                      </>
-                    )}
+                  <TableCell className="text-foreground">
+                    {brand.name}
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredBrands.map((brand) => (
-                  <TableRow key={brand.id}>
-                    <TableCell className="font-medium text-[#121212] dark:text-[#E0E0E0]">
-                      {brand.code}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {brand.name}
-                    </TableCell>
-                    <TableCell className="text-[#121212] dark:text-[#E0E0E0]">
-                      {brand.manufacturers?.name || "-"}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate text-[#121212] dark:text-[#E0E0E0]">
-                      {brand.description || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                          brand.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-                        )}
-                      >
-                        {brand.is_active ? (
-                          <>
-                            <Check className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          "Inactive"
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canManage ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(brand)}
-                              className="hover:bg-[#F4F4F4] dark:hover:bg-[#2C2C2C]"
-                              title="Edit brand"
-                            >
-                              <Edit className="w-4 h-4 text-[#121212] dark:text-[#E0E0E0]" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteConfirm(brand.id, brand.name)
-                              }
-                              className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Delete brand"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </>
-                        ) : (
+                  <TableCell className="text-foreground">
+                    {brand.manufacturers?.name || "-"}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate text-foreground">
+                    {brand.description || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                        brand.is_active
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+                      )}
+                    >
+                      {brand.is_active ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Active
+                        </>
+                      ) : (
+                        "Inactive"
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canManage ? (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="cursor-default"
-                            title="View only"
+                            onClick={() => openModal(brand)}
+                            className="hover:bg-secondary"
+                            title="Edit brand"
                           >
-                            <Eye className="w-4 h-4 text-[#888888] dark:text-[#B0B0B0]" />
+                            <Edit className="w-4 h-4 text-foreground" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteConfirm(brand.id, brand.name)
+                            }
+                            className="hover:bg-destructive/10"
+                            title="Delete brand"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-default"
+                          title="View only"
+                        >
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </PaginatedTable>
 
-      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingBrand ? "Edit Brand" : "Add Brand"}
         className="max-w-md"
+        staticBackdrop={true}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {formErrors.submit && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-sm text-red-600 dark:text-red-400">
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
               {formErrors.submit}
             </div>
           )}
@@ -556,7 +505,7 @@ export default function BrandsPage() {
             }
             placeholder="Brief description of the brand"
           />
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E0E0E0] dark:border-[#444444]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               variant="ghost"
               onClick={closeModal}
@@ -581,7 +530,6 @@ export default function BrandsPage() {
         </form>
       </Modal>
 
-      {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={closeConfirmDialog}
@@ -598,6 +546,7 @@ export default function BrandsPage() {
         cancelText="Cancel"
         variant={confirmDialog.variant || "danger"}
         isLoading={isSubmitting}
+        staticBackdrop={true}
       />
     </div>
   );

@@ -1,32 +1,32 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { AuthProvider } from "@/components/providers/AuthProvider";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { Toaster } from "sonner";
+"use client";
 
-const inter = Inter({ subsets: ["latin"] });
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-export const metadata: Metadata = {
-  title: "Asset Monitoring System",
-  description: "Enterprise Asset Management System",
-};
+export default function HomePage() {
+  const router = useRouter();
+  const supabase = createClient();
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/login");
+      }
+    };
+
+    checkAuth();
+  }, [router, supabase]);
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider>
-          <AuthProvider>
-            {children}
-            <Toaster position="top-right" richColors />
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+    <div className="min-h-screen flex items-center justify-center bg-theme">
+      <div className="text-muted-foreground">Loading...</div>
+    </div>
   );
 }

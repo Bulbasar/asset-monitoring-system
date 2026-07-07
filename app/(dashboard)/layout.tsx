@@ -5,6 +5,28 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+
+function ErrorFallback({ error, resetErrorBoundary }: any) {
+  return (
+    <div className="flex items-center justify-center h-full p-6">
+      <div className="text-center">
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Something went wrong
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {error.message || "An unexpected error occurred"}
+        </p>
+        <button
+          onClick={resetErrorBoundary}
+          className="text-sm text-primary hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -38,7 +60,9 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
         <main className="flex-1 p-6 overflow-y-auto bg-theme transition-colors duration-300">
-          {children}
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

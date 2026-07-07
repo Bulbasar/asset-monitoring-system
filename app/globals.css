@@ -11,7 +11,7 @@
     --popover: 248 248 248;
     --popover-foreground: 10 10 10;
     --primary: 10 10 10;
-    --primary-foreground: 248 248 248; /* Light text on dark button */
+    --primary-foreground: 248 248 248;
     --secondary: 232 232 232;
     --secondary-foreground: 10 10 10;
     --muted: 232 232 232;
@@ -44,7 +44,7 @@
     --popover: 26 26 26;
     --popover-foreground: 224 224 224;
     --primary: 224 224 224;
-    --primary-foreground: 18 18 18; /* Dark text on light button */
+    --primary-foreground: 18 18 18;
     --secondary: 44 44 44;
     --secondary-foreground: 224 224 224;
     --muted: 44 44 44;
@@ -75,6 +75,31 @@
   html,
   body {
     background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+  }
+
+  /* Fix button text color inheritance */
+  button.bg-primary {
+    color: rgb(var(--primary-foreground)) !important;
+  }
+
+  button.bg-secondary {
+    color: rgb(var(--secondary-foreground));
+  }
+
+  button.bg-destructive {
+    color: rgb(var(--destructive-foreground)) !important;
+  }
+
+  button.bg-success {
+    color: white !important;
+  }
+
+  button.bg-warning {
+    color: white !important;
+  }
+
+  button.bg-transparent {
     color: rgb(var(--foreground));
   }
 }

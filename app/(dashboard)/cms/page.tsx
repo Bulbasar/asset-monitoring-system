@@ -7,9 +7,15 @@ export default function CMSPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the first module (Brands) when CMS is loaded
-    router.replace("/cms/brands");
+    // Check if we're already on the correct path
+    if (window.location.pathname === "/cms") {
+      router.replace("/cms/brands");
+    }
   }, [router]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-muted-foreground">Redirecting to Brands...</div>
+    </div>
+  );
 }

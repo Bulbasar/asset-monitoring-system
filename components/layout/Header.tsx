@@ -10,8 +10,8 @@ export function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="w-full bg-header border-b border-header px-6 py-4 transition-colors duration-300 flex-shrink-0">
-      <div className="flex items-center justify-between max-w-full">
+    <header className="w-full h-16 bg-header border-b border-header px-6 transition-colors duration-300 flex-shrink-0 flex items-center">
+      <div className="flex items-center justify-between w-full">
         <div>
           <h2 className="text-xl font-semibold text-header">
             Welcome back,{" "}
@@ -21,7 +21,7 @@ export function Header() {
         <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg bg-secondary hover:bg-muted transition-colors duration-300 border border-border"
+            className="p-2 rounded-lg bg-secondary hover:bg-muted transition-colors duration-300 border border-border flex items-center justify-center"
             aria-label="Toggle theme"
           >
             {theme === "light" ? (
@@ -35,8 +35,13 @@ export function Header() {
             <User className="w-4 h-4" />
             <span>{profile?.display_name || "Loading..."}</span>
           </div>
-          <Button variant="secondary" size="sm" onClick={signOut}>
-            <LogOut className="w-4 h-4 mr-2" />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={signOut}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
             Sign Out
           </Button>
         </div>

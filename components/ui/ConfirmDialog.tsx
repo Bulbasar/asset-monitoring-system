@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { X, AlertTriangle, Info, CheckCircle } from "lucide-react";
@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   cancelText?: string;
   variant?: "danger" | "warning" | "info" | "success";
   isLoading?: boolean;
+  staticBackdrop?: boolean;
 }
 
 export function ConfirmDialog({
@@ -27,12 +28,32 @@ export function ConfirmDialog({
   cancelText = "Cancel",
   variant = "danger",
   isLoading = false,
+  staticBackdrop = false,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape" && isOpen && !staticBackdrop) {
         onClose();
       }
     };
@@ -41,7 +62,8 @@ export function ConfirmDialog({
       if (
         dialogRef.current &&
         !dialogRef.current.contains(e.target as Node) &&
-        isOpen
+        isOpen &&
+        !staticBackdrop
       ) {
         onClose();
       }
@@ -58,9 +80,9 @@ export function ConfirmDialog({
       document.removeEventListener("mousedown", handleClickOutside);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, staticBackdrop]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const variantConfig = {
     danger: {
@@ -101,13 +123,31 @@ export function ConfirmDialog({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop with animation */}
+      <div
+        className={cn(
+          "fixed inset-0 transition-all duration-300 ease-out",
+          isAnimating ? "opacity-100" : "opacity-0",
+        )}
+        style={{
+          background: "rgba(0, 0, 0, 0.5)",
+          backdropFilter: "blur(4px)",
+        }}
+        onClick={() => {
+          if (!staticBackdrop) onClose();
+        }}
+      />
+
+      {/* Dialog with animation */}
       <div
         ref={dialogRef}
         className={cn(
-          "relative max-w-md w-full bg-card rounded-xl shadow-2xl border transition-colors duration-300",
+          "relative max-w-md w-full bg-card rounded-xl shadow-2xl border transition-all duration-300 ease-out",
           config.borderColor,
-          "animate-in slide-in-from-bottom-4 duration-200",
+          isAnimating
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4",
         )}
       >
         <button
@@ -119,7 +159,12 @@ export function ConfirmDialog({
 
         <div className="p-6">
           <div className="flex items-center justify-center mb-4">
-            <div className={cn("p-3 rounded-full", config.bgColor)}>
+            <div
+              className={cn(
+                "p-3 rounded-full transition-all duration-300",
+                config.bgColor,
+              )}
+            >
               <Icon className={cn("w-6 h-6", config.iconColor)} />
             </div>
           </div>

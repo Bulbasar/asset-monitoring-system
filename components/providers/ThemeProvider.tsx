@@ -25,6 +25,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     console.log("ThemeProvider: Initial theme set to", initialTheme);
     setTheme(initialTheme);
 
+    // IMPORTANT: Apply dark class to html element
     if (initialTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -40,6 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
 
+    // IMPORTANT: Toggle dark class on html element
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else {

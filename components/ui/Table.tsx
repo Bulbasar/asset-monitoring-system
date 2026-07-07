@@ -78,7 +78,7 @@ export function TableCell({ children, className, colSpan }: TableCellProps) {
     <td
       colSpan={colSpan}
       className={cn(
-        "px-6 py-4 whitespace-nowrap text-sm text-[#0A0A0A] dark:text-[#E0E0E0] font-medium transition-colors duration-300",
+        "px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium transition-colors duration-300",
         className,
       )}
     >

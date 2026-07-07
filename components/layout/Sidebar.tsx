@@ -46,7 +46,7 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 min-h-screen flex flex-col flex-shrink-0 bg-sidebar text-sidebar border-r border-sidebar transition-colors duration-300">
-      <div className="p-4 border-b border-sidebar">
+      <div className="h-16 p-4 border-b border-sidebar flex items-center">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-sidebar border border-sidebar">
             <Building2 className="w-5 h-5 text-sidebar" />

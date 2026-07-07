@@ -50,6 +50,9 @@ export function Button({
         sizes[size],
         className,
       )}
+      style={{
+        color: variant === "primary" ? "var(--primary-foreground)" : undefined,
+      }}
       {...props}
     >
       {children}
