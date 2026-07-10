@@ -4,7 +4,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 function ErrorFallback({ error, resetErrorBoundary }: any) {
@@ -35,12 +35,17 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   if (loading) {
     return (
@@ -56,9 +61,9 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-theme transition-colors duration-300">
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        <Header onMenuClick={handleSidebarToggle} />
         <main className="flex-1 p-6 overflow-y-auto bg-theme transition-colors duration-300">
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             {children}
